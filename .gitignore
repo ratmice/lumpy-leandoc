@@ -1,4 +1,3 @@
 /target
 **/*.rs.bk
-
-docs_out/**
+/docs_out
