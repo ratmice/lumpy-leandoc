@@ -1,0 +1,89 @@
+%YAML 1.2
+---
+# http://www.sublimetext.com/docs/3/syntax.html
+name: Lean
+file_extensions:
+  - lean
+  - hlean
+scope: source.lean
+contexts:
+  main:
+    - include: dashComment
+    - include: blockComment
+    - match: ^\s*(import)\b
+      captures:
+        1: keyword.other.lean
+      push:
+        - meta_scope: meta.import.lean
+        - match: $
+          pop: true
+    - match: '\b(inductive|structure|record|theorem|proposition|axiom|axioms|lemma|hypothesis|definition|def|instance|class|constant)\b[ \t\n\r({\[]+([^ \t\n\r{(\[]*)'
+      captures:
+        1: keyword.other.lean
+        2: variable.language.lean
+      push:
+        - meta_scope: meta.names.lean
+        - match: '[ \t\n\r{(\[]'
+          pop: true
+    - match: '"'
+      push:
+        - meta_scope: string.quoted.double.lean
+        - match: '"'
+          pop: true
+        - match: \\.
+          scope: constant.character.escape.lean
+    - match: '\b(Prop|Type[\''₊₀-₉]?)'
+      scope: storage.type.lean
+    - match: '@\[[^\]]*\]'
+      scope: storage.modifier.lean
+    - match: 'attribute\s*\[[^\]]*\]'
+      scope: storage.modifier.lean
+    - match: \b(import|prelude|theory|protected|private|noncomputable|mutual|meta|definition|def|instance|renaming|hiding|exposing|parameter|parameters|begin|conjecture|constant|constants|hypothesis|lemma|corollary|variable|variables|premise|premises|print|theorem|example|abbreviation|context|open|as|export|axiom|inductive|with|structure|record|universe|universes|alias|help|override|precedence|reserve|postfix|prefix|infix|infixl|infixr|notation|vm_eval|eval|check|exit|end|using|namespace|section|local|set_option|extends|include|omit|class|classes|instances|metaclasses|raw|run_command)\b
+      scope: keyword.other.lean
+    - match: \b(calc|have|assert|suppose|this|match|obtains|do|suffices|show|by|in|at|let|forall|fun|exists|if|then|else|assume|take|obtain|from)\b
+      scope: keyword.other.lean
+    - match: (->|==|:=|<->|\\/|/\\|<=|>=|⁻¹)
+      scope: constant.language.lua
+    - match: "[#@∼↔/=∧∨≠<>≤≥¬⬝▸+*-]"
+      scope: constant.language.lua
+    - match: '(?<=\s)[=→λ∀?]'
+      scope: keyword.operator.lean
+    - match: '"'
+      captures:
+        0: punctuation.definition.string.begin.lean
+      push:
+        - meta_scope: string.quoted.double.lean
+        - match: '"'
+          captures:
+            0: punctuation.definition.string.end.lean
+          pop: true
+        - match: '\\(NUL|SOH|STX|ETX|EOT|ENQ|ACK|BEL|BS|HT|LF|VT|FF|CR|SO|SI|DLE|DC1|DC2|DC3|DC4|NAK|SYN|ETB|CAN|EM|SUB|ESC|FS|GS|RS|US|SP|DEL|[abfnrtv\\\"''\&])'
+          scope: constant.character.escape.lean
+        - match: '\\o[0-7]+|\\x[0-9A-Fa-f]+|\\[0-9]+'
+          scope: constant.character.escape.octal.lean
+        - match: '\^[A-Z@\[\]\\\^_]'
+          scope: constant.character.escape.control.lean
+    - match: '\b([0-9]+|0([xX][0-9a-fA-F]+))\b'
+      scope: constant.numeric.lean
+  blockComment:
+    - match: /-
+      captures:
+        0: punctuation.definition.comment.lean
+      push:
+        - meta_scope: comment.block.lean
+        - match: "-/"
+          captures:
+            0: punctuation.definition.comment.lean
+          pop: true
+  dashComment:
+    - match: (--)
+      captures:
+        0: punctuation.definition.comment.lean
+      push:
+        - meta_scope: comment.line.double-dash.lean
+        - match: $
+          pop: true
+  identifier:
+    - match: '\b[^\(\)\{\}[:space:]=→λ∀?][^\(\)\{\}[:space:]]*'
+      comment: not so much here to be used as to be a reference
+      scope: entity.name.function.lean

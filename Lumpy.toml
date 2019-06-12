@@ -1,0 +1,42 @@
+#[[documents]]
+# Optional, defaults to path with any trailing / stripped..
+# name = "Tests"
+
+# All other options are currently required.
+#authors = ["matt rice <ratmice@gmail.com>"]
+
+
+# Paths will be output in the order given
+#paths = ["tests/src/./nat/", "tests/src/./algebra/", "tests/src/."]
+#output_formats = ["tex", "pdf"]
+#comment_format = "cmark"
+
+[[documents]]
+title = "Example"
+file_name = "examples"
+authors = ["matt rice <ratmice@gmail.com>"]
+src_dirs = ["examples/."]
+output_dir = "docs_out/"
+output_formats = ["tex", "pdf"]
+comment_format = "cmark"
+
+# Some Silly tests for output_formats.
+[[documents]]
+title = "Example"
+file_name = "onlypdf"
+authors = ["matt rice <ratmice@gmail.com>"]
+src_dirs = ["examples/."]
+output_dir = "docs_out/"
+output_formats = ["pdf"]
+comment_format = "cmark"
+
+[[documents]]
+title = "Example"
+file_name = "onlytex"
+authors = ["matt rice <ratmice@gmail.com>"]
+src_dirs = ["examples/."]
+output_dir = "docs_out/"
+output_formats = ["tex"]
+comment_format = "cmark"
+
+
