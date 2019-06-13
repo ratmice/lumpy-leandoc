@@ -1,5 +1,3 @@
-// Unfortunately doesn't work as it doesn't support par_bridge.
-// extern crate rayon_logs as rayon;
 extern crate env_logger;
 #[macro_use]
 extern crate failure;
@@ -12,6 +10,8 @@ extern crate olean_rs as olean;
 extern crate path_slash;
 extern crate pathdiff;
 extern crate rayon;
+// need to feature gate this linking in rayon_logs or rayon.
+//extern crate rayon_logs as rayon;
 extern crate tectonic;
 extern crate toml;
 extern crate xi_rope as rope;
@@ -136,7 +136,6 @@ fn main() -> Result<(), failure::Error> {
                         let trimmed_path = pathdiff::diff_paths(&ext_path, base);
                         let section: rope::Rope = rope::Rope::from(r"\section{")
                             + escape::tex(
-                                //                        ext_path.to_string_lossy()
                                 match &trimmed_path {
                                     None => ext_path.to_string_lossy(),
                                     Some(s) => s.to_string_lossy(),
