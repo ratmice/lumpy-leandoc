@@ -11,8 +11,6 @@ extern crate logging_timer;
 extern crate olean_rs as olean;
 extern crate path_slash;
 extern crate pathdiff;
-extern crate pulldown_cmark;
-extern crate pulldown_cmark as cmark;
 extern crate rayon;
 extern crate tectonic;
 extern crate toml;
@@ -26,7 +24,7 @@ use logging_timer::timer;
 use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
 use std::env;
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
@@ -85,11 +83,11 @@ fn main() -> Result<(), failure::Error> {
         .map(|pb| pb.clone().into_os_string())
         .collect();
 
-    let latex_tree: im::ordmap::OrdMap<&OsString, rope::Rope> = {
+    let latex_tree: im::ordmap::OrdMap<&OsStr, rope::Rope> = {
         let _tmr = timer!("process lean").level(log::Level::Info);
         olean_files
             .par_iter()
-            .map(|x| Ok(x))
+            .map(|x| Ok(x.as_os_str()))
             // generate latex
             .fold(|| Ok(im::ordmap::OrdMap::new()), gen_latex)
             .reduce(

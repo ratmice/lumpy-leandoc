@@ -5,10 +5,11 @@ use crate::errors;
 use crate::errors::ErrorKind;
 use crowbook_text_processing::escape;
 use std::error::Error;
-use std::ffi::OsString;
+use std::ffi::OsStr;
 use std::fs::File;
 use std::ops::Range;
 use std::path::Path;
+use pulldown_cmark as cmark;
 use syntect::dumps::{dump_to_file, from_dump_file};
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Color, Style, Theme, ThemeSet};
@@ -291,22 +292,13 @@ pub fn handle_event<'a>(
 }
 
 pub fn gen_elements<'a>(
-    acc_r: Result<im::ordmap::OrdMap<&'a OsString, rope::Rope>, failure::Error>,
-    path: &'a OsString,
-) -> Result<im::ordmap::OrdMap<&'a OsString, rope::Rope>, failure::Error> {
-    let mut omap: im::ordmap::OrdMap<&'a OsString, rope::Rope> = acc_r?;
+    acc_r: Result<im::ordmap::OrdMap<&'a OsStr, rope::Rope>, failure::Error>,
+    path: &'a OsStr,
+) -> Result<im::ordmap::OrdMap<&'a OsStr, rope::Rope>, failure::Error> {
+    let mut omap: im::ordmap::OrdMap<&'a OsStr, rope::Rope> = acc_r?;
     let ol = olean_rs::deserialize::read_olean(File::open(&path)?)?;
     let mods = olean_rs::deserialize::read_olean_modifications(&ol.code)?;
     let options = cmark::Options::empty();
-    /*
-    let rope: rope::Rope = escape::tex(
-            match &trimmed_path {
-                None => ext_path.to_string_lossy(),
-                Some(s) => s.to_string_lossy(),
-            }
-
-        ).into();
-        */
     let syntax_core = setup_syntax_stuff()?;
 
     let md_result: Result<(rope::Rope, _, _), failure::Error> =
@@ -333,10 +325,9 @@ pub fn gen_elements<'a>(
 }
 
 pub fn gen_latex<'a>(
-    acc: Result<im::ordmap::OrdMap<&'a OsString, rope::Rope>, failure::Error>,
-    olean: Result<&'a OsString, errors::AppError>,
-) -> Result<im::ordmap::OrdMap<&'a OsString, rope::Rope>, failure::Error> {
-    //    let acc_v: im::ordmap::OrdMap<&'a OsString, rope::Rope> = acc?;
+    acc: Result<im::ordmap::OrdMap<&'a OsStr, rope::Rope>, failure::Error>,
+    olean: Result<&'a OsStr, errors::AppError>,
+) -> Result<im::ordmap::OrdMap<&'a OsStr, rope::Rope>, failure::Error> {
     let elems = gen_elements(acc, olean?);
     elems
 }
