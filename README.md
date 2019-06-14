@@ -12,11 +12,11 @@ See Lumpy.toml for an example configuration file.
 
 ## Motivation
 The primary motivation is to make it easy to install and use.
-as such it comes with a TeX renderer [tectonic](https://github.com/tectonic)
+as such it comes with a TeX renderer [tectonic](https://tectonic-typesetting.github.io/)
 tectonic will automatically downloads any latex packages and fonts needed
 to render the document.
 
-And Syntax highlighting will not shell out to any external tools that need to be
+Syntax highlighting will not shell out to any external tools that need to be
 installed seperately.
 
 
