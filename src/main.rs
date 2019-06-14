@@ -108,7 +108,7 @@ fn main() -> Result<(), failure::Error> {
                         ropes[i] = (foo.clone())
                              + section
                              + latex_src.clone();
-
+                        break;
                     }
                 }
             }
