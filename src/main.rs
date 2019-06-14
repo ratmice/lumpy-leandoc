@@ -25,7 +25,7 @@ use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
-use std::path::{Path,PathBuf};
+use std::path::{Path, PathBuf};
 use std::string::String;
 
 mod config;
@@ -56,26 +56,23 @@ fn main() -> Result<(), failure::Error> {
 
     let cfg_file_dir = cfg_file_path.parent().unwrap_or_else(|| &cwd);
     env::set_current_dir(cfg_file_dir)?;
-    
-    let olean_files : Vec<PathBuf> = {
-      let unique_files: im::HashSet<PathBuf> = docs
-        .documents
-        .par_iter()
-        .fold(
-            || Ok(im::HashSet::new()),
-            |uniq, doc| {
-                doc.src_dirs.iter().fold(uniq, |uniq, path| {
-                    walk_without_duplicates(uniq, PathBuf::from_slash_lossy(path))
-                })
-            },
-        )
-        .reduce(|| Ok(im::HashSet::new()), |a, b| Ok(a?.union(b?)))?;
+
+    let olean_files: Vec<PathBuf> = {
+        let unique_files: im::HashSet<PathBuf> = docs
+            .documents
+            .par_iter()
+            .fold(
+                || Ok(im::HashSet::new()),
+                |uniq, doc| {
+                    doc.src_dirs.iter().fold(uniq, |uniq, path| {
+                        walk_without_duplicates(uniq, PathBuf::from_slash_lossy(path))
+                    })
+                },
+            )
+            .reduce(|| Ok(im::HashSet::new()), |a, b| Ok(a?.union(b?)))?;
 
         /* It would perhaps be nice to avoid this pass */
-        unique_files
-        .iter()
-        .map(|pb| pb.clone())
-        .collect()
+        unique_files.iter().map(|pb| pb.clone()).collect()
     };
 
     let latex_tree: im::ordmap::OrdMap<&Path, rope::Rope> = {
@@ -98,16 +95,13 @@ fn main() -> Result<(), failure::Error> {
             let _tmr = timer!("sorting", "sections {}.tex", doc.file_name).level(log::Level::Info);
             for (file_name, latex_src) in &latex_tree {
                 for (i, src_dir) in doc.src_dirs.iter().enumerate() {
-                    if file_name.starts_with(src_dir) 
-                    {
+                    if file_name.starts_with(src_dir) {
                         let path = path::olean_to_lean(file_name.strip_prefix(src_dir)?);
                         let section: rope::Rope = rope::Rope::from(r"\section{")
                             + escape::tex(path.to_string_lossy()).into()
                             + "}".into();
                         let foo = &ropes[i];
-                        ropes[i] = (foo.clone())
-                             + section
-                             + latex_src.clone();
+                        ropes[i] = (foo.clone()) + section + latex_src.clone();
                         break;
                     }
                 }
