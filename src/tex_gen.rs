@@ -5,7 +5,6 @@ use crate::errors;
 use crate::errors::ErrorKind;
 use crowbook_text_processing::escape;
 use std::error::Error;
-use std::ffi::OsStr;
 use std::fs::File;
 use std::ops::Range;
 use std::path::Path;
@@ -292,10 +291,10 @@ pub fn handle_event<'a>(
 }
 
 pub fn gen_elements<'a>(
-    acc_r: Result<im::ordmap::OrdMap<&'a OsStr, rope::Rope>, failure::Error>,
-    path: &'a OsStr,
-) -> Result<im::ordmap::OrdMap<&'a OsStr, rope::Rope>, failure::Error> {
-    let mut omap: im::ordmap::OrdMap<&'a OsStr, rope::Rope> = acc_r?;
+    acc_r: Result<im::ordmap::OrdMap<&'a Path, rope::Rope>, failure::Error>,
+    path: &'a Path,
+) -> Result<im::ordmap::OrdMap<&'a Path, rope::Rope>, failure::Error> {
+    let mut omap: im::ordmap::OrdMap<&'a Path, rope::Rope> = acc_r?;
     let ol = olean_rs::deserialize::read_olean(File::open(&path)?)?;
     let mods = olean_rs::deserialize::read_olean_modifications(&ol.code)?;
     let options = cmark::Options::empty();
@@ -325,9 +324,9 @@ pub fn gen_elements<'a>(
 }
 
 pub fn gen_latex<'a>(
-    acc: Result<im::ordmap::OrdMap<&'a OsStr, rope::Rope>, failure::Error>,
-    olean: Result<&'a OsStr, errors::AppError>,
-) -> Result<im::ordmap::OrdMap<&'a OsStr, rope::Rope>, failure::Error> {
+    acc: Result<im::ordmap::OrdMap<&'a Path, rope::Rope>, failure::Error>,
+    olean: Result<&'a Path, errors::AppError>,
+) -> Result<im::ordmap::OrdMap<&'a Path, rope::Rope>, failure::Error> {
     let elems = gen_elements(acc, olean?);
     elems
 }

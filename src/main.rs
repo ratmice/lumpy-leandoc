@@ -2,13 +2,11 @@ extern crate env_logger;
 #[macro_use]
 extern crate failure;
 extern crate crowbook_text_processing;
-extern crate globset;
 extern crate im;
 extern crate log;
 extern crate logging_timer;
 extern crate olean_rs as olean;
 extern crate path_slash;
-extern crate pathdiff;
 extern crate rayon;
 // need to feature gate this linking in rayon_logs or rayon.
 //extern crate rayon_logs as rayon;
@@ -24,11 +22,10 @@ use logging_timer::timer;
 use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
 use std::env;
-use std::ffi::{OsStr, OsString};
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
-use std::path::PathBuf;
+use std::path::{Path,PathBuf};
 use std::string::String;
 
 mod config;
@@ -59,13 +56,9 @@ fn main() -> Result<(), failure::Error> {
 
     let cfg_file_dir = cfg_file_path.parent().unwrap_or_else(|| &cwd);
     env::set_current_dir(cfg_file_dir)?;
-    /* walk over [src/a, src/z, src/], and make a set of unique files
-     * It is possible that some normalization needs to occur here
-     * In which place our entire sorting/globbing mechanism is pretty screwed
-     * but we perhaps can say we don't support hard links and non-portable
-     * filesystem features in source repositories.
-     */
-    let unique_files: im::HashSet<PathBuf> = docs
+    
+    let olean_files : Vec<PathBuf> = {
+      let unique_files: im::HashSet<PathBuf> = docs
         .documents
         .par_iter()
         .fold(
@@ -77,17 +70,19 @@ fn main() -> Result<(), failure::Error> {
             },
         )
         .reduce(|| Ok(im::HashSet::new()), |a, b| Ok(a?.union(b?)))?;
-    /* It would perhaps be nice to avoid this pass */
-    let olean_files: Vec<OsString> = unique_files
-        .iter()
-        .map(|pb| pb.clone().into_os_string())
-        .collect();
 
-    let latex_tree: im::ordmap::OrdMap<&OsStr, rope::Rope> = {
+        /* It would perhaps be nice to avoid this pass */
+        unique_files
+        .iter()
+        .map(|pb| pb.clone())
+        .collect()
+    };
+
+    let latex_tree: im::ordmap::OrdMap<&Path, rope::Rope> = {
         let _tmr = timer!("process lean").level(log::Level::Info);
         olean_files
             .par_iter()
-            .map(|x| Ok(x.as_os_str()))
+            .map(|x| Ok(x.as_path()))
             // generate latex
             .fold(|| Ok(im::ordmap::OrdMap::new()), gen_latex)
             .reduce(
@@ -97,55 +92,24 @@ fn main() -> Result<(), failure::Error> {
     };
 
     for doc in docs.documents {
-        let mut glob_set_builder = globset::GlobSetBuilder::new();
-        for dir in doc.src_dirs.iter() {
-            let dir_name = dir.to_string_lossy();
-            let glob_str = if dir_name.ends_with("/") {
-                format!("{}*", dir_name)
-            } else {
-                format!("{}/*", dir_name)
-            };
-            let dir_glob = globset::Glob::new(&glob_str);
-            glob_set_builder.add(dir_glob?);
-        }
-        let glob_set = glob_set_builder.build()?;
         let mut ropes: Vec<rope::Rope> = vec!["".into(); doc.src_dirs.len()];
         /* build sections in the order of the first src_dir that matches the glob */
         {
             let _tmr = timer!("sorting", "sections {}.tex", doc.file_name).level(log::Level::Info);
             for (file_name, latex_src) in &latex_tree {
-                let matches = glob_set.matches(file_name);
-                let min = matches.iter().fold(None, |x_option, y| match x_option {
-                    None => Some(y),
-                    Some(x) => {
-                        if x < y {
-                            Some(x)
-                        } else {
-                            Some(y)
-                        }
-                    }
-                });
-                /*                println!("file_name: {:?} first_match: {:?} matches: {:?} src_dirs: {:?}",
-                                        file_name, first_match, matches, doc.src_dirs);
-                */
-                match min {
-                    Some(index) => {
-                        let foo = &ropes[*index];
-                        let base = &doc.src_dirs[*index];
-                        let ext_path = path::olean_to_lean(file_name);
-                        let trimmed_path = pathdiff::diff_paths(&ext_path, base);
+                for (i, src_dir) in doc.src_dirs.iter().enumerate() {
+                    if file_name.starts_with(src_dir) 
+                    {
+                        let path = path::olean_to_lean(file_name.strip_prefix(src_dir)?);
                         let section: rope::Rope = rope::Rope::from(r"\section{")
-                            + escape::tex(
-                                match &trimmed_path {
-                                    None => ext_path.to_string_lossy(),
-                                    Some(s) => s.to_string_lossy(),
-                                },
-                            )
-                            .into()
+                            + escape::tex(path.to_string_lossy()).into()
                             + "}".into();
-                        ropes[*index] = (foo.clone()) + section + latex_src.clone()
+                        let foo = &ropes[i];
+                        ropes[i] = (foo.clone())
+                             + section
+                             + latex_src.clone();
+
                     }
-                    None => (),
                 }
             }
         }
