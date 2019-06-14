@@ -10,6 +10,16 @@ Documentation will then be generated from the .olean file which lean produces.
 
 See Lumpy.toml for an example configuration file.
 
+## Motivation
+The primary motivation is to make it easy to install and use.
+as such it comes with a TeX renderer [tectonic](https://github.com/tectonic)
+tectonic will automatically downloads any latex packages and fonts needed
+to render the document.
+
+And Syntax highlighting will not shell out to any external tools that need to be
+installed seperately.
+
+
 ## Installation
   1. install [rust](https://www.rust-lang.org/tools/install)
   2. ```cargo install --git https://github.com/ratmice/lumpy-leandoc```
