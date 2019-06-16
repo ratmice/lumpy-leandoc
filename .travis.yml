@@ -1,6 +1,7 @@
 os:
-  - windows
   - linux
+#  - windows
+
 language: rust
 rust:
   - stable
@@ -12,4 +13,21 @@ matrix:
     - rust: nightly
   fast_finish: true
 
+addons:
+  apt:
+    packages:
+      - libgraphite2-dev
+      - libharfbuzz-dev
+      - libfontconfig1-dev
+      - libicu-dev
+      - libssl-dev
+      - openssl
+      - zlib1g-dev
+  homebrew:
+    packages:
+      - harfbuzz
+      - openssl
+
+notifications:
+  email:false
 cache: cargo
