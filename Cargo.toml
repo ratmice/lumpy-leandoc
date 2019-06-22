@@ -9,11 +9,7 @@ failure = "^0.1"
 walkdir = "^2.2"
 olean-rs = { git="https://github.com/ratmice/olean-rs.git" }
 pulldown-cmark = "^0.5"
-# tectonic = "^0.1"
-#
-# Contains hacks to attempt to use bundled in harfbuzz dependencies if
-# it cannot be found already on the system, but no functional difference.
-tectonic = { git="https://github.com/ratmice/tectonic.git" }
+tectonic = "^0.1"
 # Feature gate this to bring in rayon or rayon_lgos.
 #rayon_logs = "0.1.2"
 rayon = "^1.1"
