@@ -290,11 +290,13 @@ pub fn handle_event<'a>(
     }
 }
 
-pub fn gen_elements<'a>(
-    acc_r: Result<im::ordmap::OrdMap<&'a Path, rope::Rope>, failure::Error>,
-    path: &'a Path,
-) -> Result<im::ordmap::OrdMap<&'a Path, rope::Rope>, failure::Error> {
-    let mut omap: im::ordmap::OrdMap<&'a Path, rope::Rope> = acc_r?;
+pub fn gen_elements<P: AsRef<Path>>(
+    acc_r: Result<im::ordmap::OrdMap<P, rope::Rope>, failure::Error>,
+    path: P,
+) -> Result<im::ordmap::OrdMap<P, rope::Rope>, failure::Error>
+  where P: std::cmp::Ord + std::clone::Clone
+{
+    let mut omap: im::ordmap::OrdMap<P, rope::Rope> = acc_r?;
     let ol = olean_rs::deserialize::read_olean(File::open(&path)?)?;
     let mods = olean_rs::deserialize::read_olean_modifications(&ol.code)?;
     let options = cmark::Options::empty();
@@ -319,7 +321,7 @@ pub fn gen_elements<'a>(
                     Ok((rope, &syntax_core, None))
                 }
             });
-    let _ = omap.insert(&path, md_result?.0);
+    let _ = omap.insert(path, md_result?.0);
     Ok(omap)
 }
 
