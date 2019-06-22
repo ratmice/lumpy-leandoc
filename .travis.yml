@@ -2,6 +2,9 @@ matrix:
   include:
   - os: linux
     dist: xenial
+  - os: osx
+# doesn't seem sane.
+# https://github.com/travis-ci/travis-build/pull/1719
 #  - windows
 
 language: rust
@@ -19,16 +22,12 @@ matrix:
 addons:
   apt:
     packages:
-      - libgraphite2-dev
-      - libharfbuzz-dev
       - libfontconfig1-dev
-      - libicu-dev
       - libssl-dev
       - openssl
       - zlib1g-dev
   homebrew:
     packages:
-      - harfbuzz
       - openssl
 
 notifications:
