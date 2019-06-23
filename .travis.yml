@@ -1,0 +1,35 @@
+matrix:
+  include:
+  - os: linux
+    dist: xenial
+  - os: osx
+# doesn't seem sane.
+# https://github.com/travis-ci/travis-build/pull/1719
+#  - windows
+
+language: rust
+rust:
+  - stable
+  - beta
+  - nightly
+matrix:
+  allow_failures:
+    - rust: beta
+    - rust: nightly
+  fast_finish: true
+
+
+addons:
+  apt:
+    packages:
+      - libfontconfig1-dev
+      - libssl-dev
+      - openssl
+      - zlib1g-dev
+  homebrew:
+    packages:
+      - openssl
+
+notifications:
+  email:false
+cache: cargo
