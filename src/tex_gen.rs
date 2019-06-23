@@ -294,7 +294,8 @@ pub fn gen_elements<P: AsRef<Path>>(
     acc_r: Result<im::ordmap::OrdMap<P, rope::Rope>, failure::Error>,
     path: P,
 ) -> Result<im::ordmap::OrdMap<P, rope::Rope>, failure::Error>
-  where P: std::cmp::Ord + std::clone::Clone
+where
+    P: std::cmp::Ord + std::clone::Clone,
 {
     let mut omap: im::ordmap::OrdMap<P, rope::Rope> = acc_r?;
     let ol = olean_rs::deserialize::read_olean(File::open(&path)?)?;
