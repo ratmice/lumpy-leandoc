@@ -22,7 +22,11 @@ installed seperately.
 
 ## Installation
   1. install [rust](https://www.rust-lang.org/tools/install)
-  2. ```cargo install --git https://github.com/ratmice/lumpy-leandoc```
+  2. install [harfbuzz](https://harfbuzz.org) 1.4 or later is required.
+     harfbuzz needs to be built with libicu and graphite2 support.
+     With ubuntu ```apt-get install libharfbuzz-dev```
+     On fedora ```dnf install harfbuzz-devel``` should suffice.
+  3. ```cargo install --git https://github.com/ratmice/lumpy-leandoc```
 
 ## Usage
   * Add a Lumpy.toml next to your leanpkg.toml
