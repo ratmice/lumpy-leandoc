@@ -410,7 +410,7 @@ pub fn doc_begin(title: &str, authors: Vec<&str>) -> rope::Rope {
     rope::Rope::from("")
     + rope::Rope::from("\\documentclass{article}\n".to_string())
     + packages()
-    + rope::Rope::from(format!("\\author{{{}}}\n", authors.join(r"\and")))
+    + rope::Rope::from(format!("\\author{{{}}}\n", authors.join(r"\and ")))
     + rope::Rope::from(format!("\\title{{{}}}\n", title))
     + unicode_hack()
     // r"...

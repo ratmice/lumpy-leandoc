@@ -30,3 +30,13 @@ src_dirs = ["examples"]
 output_dir = "docs_out/"
 output_formats = ["tex"]
 comment_format = "cmark"
+
+[[documents]]
+title = "Multi Author"
+file_name = "multi-author"
+authors = ["Author One", "Author Two"]
+src_dirs = ["examples"]
+output_dir = "docs_out/"
+output_formats = ["tex", "pdf"]
+comment_format = "cmark"
+
