@@ -152,10 +152,13 @@ fn main() -> Result<(), failure::Error> {
                 for (file_name, html_src) in &html_tree {
                     for (_i, src_dir) in doc.src_dirs.iter().enumerate() {
                         if file_name.starts_with(src_dir) {
-                            // let _path = path::olean_to_lean(file_name.strip_prefix(src_dir)?);
-                            std::fs::create_dir_all(&doc.output_dir)?;
+                            let _path = path::olean_to_lean(file_name.strip_prefix(src_dir)?);
+                            let mut output_path = doc.output_dir.clone();
+                            output_path.push_str(&doc.file_name);
+                            std::fs::create_dir_all(&output_path)?;
+                            // FIXME unwrap
                             let mut out_buf_html = File::create(PathBuf::from_slash(format!(
-                                        "{}/{}.html", doc.output_dir, doc.file_name
+                                        "{}/{}.html", output_path, _path.to_str().unwrap()
                             )))?;
                             out_buf_html.write_all(html_src.to_string().as_bytes())?;
                             break;
