@@ -24,10 +24,13 @@ enum OutputTarget {
     Pdf,
     #[serde(rename = "tex")]
     TeX,
+    #[serde(rename = "html")]
+    HTML,
 }
 
 pub trait OutputFormatStuff {
     fn output_pdf(&self) -> bool;
+    fn output_html(&self) -> bool;
     fn output_tex(&self) -> bool;
 }
 
@@ -46,6 +49,15 @@ impl OutputFormatStuff for Document {
         for target in self.output_formats.iter() {
             match target {
                 OutputTarget::TeX => return true,
+                _ => continue,
+            }
+        }
+        return false;
+    }
+    fn output_html(&self) -> bool {
+        for target in self.output_formats.iter() {
+            match target {
+                OutputTarget::HTML => return true,
                 _ => continue,
             }
         }

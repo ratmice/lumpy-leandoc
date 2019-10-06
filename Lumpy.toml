@@ -9,7 +9,7 @@ authors = ["matt rice <ratmice@gmail.com>"]
 # Paths will be output in the order given
 src_dirs = ["examples"]
 output_dir = "docs_out/"
-output_formats = ["tex", "pdf"]
+output_formats = ["tex", "pdf", "html"]
 comment_format = "cmark"
 
 # Some Silly tests for output_formats.
@@ -37,6 +37,6 @@ file_name = "multi-author"
 authors = ["Author One", "Author Two"]
 src_dirs = ["examples"]
 output_dir = "docs_out/"
-output_formats = ["tex", "pdf"]
+output_formats = ["tex", "pdf", "html"]
 comment_format = "cmark"
 

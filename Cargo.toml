@@ -15,7 +15,7 @@ tectonic = "^0.1"
 rayon = "^1.1"
 im = "^13.0"
 crowbook-text-processing = "^0.2"
-xi-rope = { git="https://github.com/xi-editor/xi-editor.git"}
+xi-rope = "^0.3"
 syntect = "^3.2"
 logging_timer = "^0.2"
 log = "^0.4"
