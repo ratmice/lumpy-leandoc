@@ -2,15 +2,17 @@ extern crate crowbook_text_processing;
 extern crate im;
 extern crate syntect;
 use crate::errors;
-use crate::syntax_hilight::{SyntaxStuff, SyntaxCore, highlighter, setup_syntax_stuff, DEFAULT_THEME};
+use crate::syntax_hilight::{
+    highlighter, setup_syntax_stuff, SyntaxCore, SyntaxStuff, DEFAULT_THEME,
+};
 use crowbook_text_processing::escape;
 use pulldown_cmark as cmark;
 use std::fs::File;
 use std::ops::Range;
 use std::path::Path;
 use syntect::easy::HighlightLines;
-use syntect::util::LinesWithEndings;
 use syntect::highlighting::{Color, Style};
+use syntect::util::LinesWithEndings;
 
 pub fn stylish_tex(r: rope::Rope, tuple: (Style, &str)) -> rope::Rope {
     let (style, text) = tuple;
@@ -40,8 +42,6 @@ pub fn stylish_tex(r: rope::Rope, tuple: (Style, &str)) -> rope::Rope {
         .into()
         + "}}}".into()
 }
-
-
 
 pub fn lit<'a>(stuff: &'a SyntaxStuff, text: String, inline: bool) -> rope::Rope {
     let mut highlighter = HighlightLines::new(stuff.syntax, &stuff.theme);
@@ -180,7 +180,10 @@ pub fn handle_event<'a>(
         ))
         .into()),
         cmark::Event::InlineHtml(html_str) => Err(errors::AppError::App(
-            errors::ErrorKind::MarkdownLatexConversion(format!("unsupported inline html: {}", html_str)),
+            errors::ErrorKind::MarkdownLatexConversion(format!(
+                "unsupported inline html: {}",
+                html_str
+            )),
         )
         .into()),
         cmark::Event::FootnoteReference(s) => Ok((
@@ -196,7 +199,9 @@ pub fn handle_event<'a>(
             Ok((rope + r"\hrulefill ".into(), syntax_core, None))
         }
         cmark::Event::End(cmark::Tag::Rule) => Ok((rope, syntax_core, None)),
-        _ => Err(errors::ErrorKind::MarkdownLatexConversion(format!("unsupported markdown tag")).into()),
+        _ => Err(
+            errors::ErrorKind::MarkdownLatexConversion(format!("unsupported markdown tag")).into(),
+        ),
     }
 }
 

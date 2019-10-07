@@ -1,8 +1,7 @@
-
-use syntect::highlighting::{Theme, ThemeSet};
-use syntect::dumps::{dump_to_file, from_dump_file};
 use std::error::Error;
 use std::path::Path;
+use syntect::dumps::{dump_to_file, from_dump_file};
+use syntect::highlighting::{Theme, ThemeSet};
 /* allow until i have installer stuff figured out...
  * Until then make do with syntect built-in themes.
  */

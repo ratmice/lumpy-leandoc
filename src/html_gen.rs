@@ -1,9 +1,83 @@
-use pulldown_cmark::{Parser, html};
-use pulldown_cmark as cmark;
 use crate::errors;
-use std::fs::File;
 use crate::syntax_hilight::*;
+use pulldown_cmark as cmark;
+use pulldown_cmark::{Event, Parser, Tag};
+use std::fs::File;
 use std::path::Path;
+use syntect as synt;
+struct ParseState<'a> {
+    p: Parser<'a>,
+    sc: SyntaxCore,
+    theme_name: String,
+    lang: Option<String>,
+}
+
+impl<'a> ParseState<'a> {
+    pub fn new(p: Parser<'a>, sc: SyntaxCore) -> Self {
+        ParseState {
+            p,
+            sc: sc,
+            lang: None,
+            theme_name: DEFAULT_THEME.to_string(),
+        }
+    }
+}
+
+impl<'a> Iterator for ParseState<'a> {
+    type Item = Event<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.p.next().map(|e: Self::Item| match e {
+            Event::Start(Tag::CodeBlock(lang)) => {
+                self.lang = Some(lang.to_string());
+                Event::Start(Tag::CodeBlock(lang))
+            }
+
+            Event::End(Tag::CodeBlock(lang)) => {
+                self.lang = None;
+                Event::End(Tag::CodeBlock(lang))
+            }
+
+            Event::Text(text) => match &self.lang {
+                Some(lang) => highlighter(&lang, &self.theme_name, &self.sc)
+                    .map(|stuff| {
+                        Event::Html(
+                            synt::html::highlighted_html_for_string(
+                                &text,
+                                &self.sc.syntax_set,
+                                &stuff.syntax,
+                                &stuff.theme,
+                            )
+                            .into(),
+                        )
+                    })
+                    .unwrap_or(Event::Text(text)),
+                None => Event::Text(text),
+            },
+            Event::Code(text) => {
+                let lang = match &self.lang {
+                    Some(l) => l,
+                    None => "lean",
+                };
+                highlighter(&lang, &self.theme_name, &self.sc)
+                    .map(|stuff| {
+                        Event::Html(
+                            synt::html::highlighted_html_for_string(
+                                &text,
+                                &self.sc.syntax_set,
+                                &stuff.syntax,
+                                &stuff.theme,
+                            )
+                            .into(),
+                        )
+                    })
+                    .unwrap_or(Event::Text(text))
+            }
+
+            e => e,
+        })
+    }
+}
 
 pub fn gen_elements<P: AsRef<Path>>(
     acc_r: Result<im::ordmap::OrdMap<P, rope::Rope>, failure::Error>,
@@ -16,24 +90,18 @@ where
     let ol = olean_rs::deserialize::read_olean(File::open(&path)?)?;
     let mods = olean_rs::deserialize::read_olean_modifications(&ol.code)?;
     let options = cmark::Options::empty();
-    let syntax_core = setup_syntax_stuff()?;
-
-    let md_result: Result<(rope::Rope, _, _), failure::Error> =
-        mods.iter()
-            .fold(Ok(("".into(), &syntax_core, None)), |result, m| match &m {
-                olean::types::Modification::Doc(_name, contents) => {
-                    let parser = Parser::new_ext(contents, options);
-                    let mut html_output = String::new();
-                    html::push_html(&mut html_output, parser);
-                    let umm : Option<String> = None;
-                    Ok((result?.0 + html_output.into(), &syntax_core, umm))
-                }
-                _ => {
-                    let (rope, syntax_core, _) = result?;
-                    Ok((rope, &syntax_core, None))
-                }
-            });
-    let _ = omap.insert(path, md_result?.0);
+    let md_result: Result<rope::Rope, failure::Error> =
+        mods.iter().fold(Ok("".into()), |out, m| match &m {
+            olean::types::Modification::Doc(_name, contents) => {
+                let parser = Parser::new_ext(contents, options);
+                let parse_state = ParseState::new(parser, setup_syntax_stuff()?);
+                let mut html_out = String::new();
+                cmark::html::push_html(&mut html_out, parse_state);
+                Ok(out? + html_out.into())
+            }
+            _ => out,
+        });
+    let _ = omap.insert(path, md_result?);
     Ok(omap)
 }
 
