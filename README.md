@@ -38,4 +38,5 @@ List of features:
   * Syntax highlighting via syntect
   * Tex -> PDF generation via tectonic
   * Markdown via pulldown_cmark
+  * HTML output (work in progress)
 
