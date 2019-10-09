@@ -61,15 +61,13 @@ impl<'a> Iterator for ParseState<'a> {
                 };
                 highlighter(&lang, &self.theme_name, &self.sc)
                     .map(|stuff| {
-                        Event::Html(
-                            synt::html::highlighted_html_for_string(
-                                &text,
-                                &self.sc.syntax_set,
-                                &stuff.syntax,
-                                &stuff.theme,
-                            )
-                            .into(),
-                        )
+                        let mut h = synt::easy::HighlightLines::new(stuff.syntax, &stuff.theme);
+                        let regions = h.highlight(&text, &stuff.core.syntax_set);
+                        let html = synt::html::styled_line_to_highlighted_html(
+                            &regions[..],
+                            synt::html::IncludeBackground::Yes,
+                        );
+                        Event::Html(html.into()).into()
                     })
                     .unwrap_or(Event::Text(text))
             }
