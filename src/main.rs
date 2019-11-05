@@ -142,10 +142,12 @@ fn main() -> Result<(), failure::Error> {
             /* Write tex sources */
             let _tmr = timer!("writing", "{}.tex", doc.file_name).level(log::Level::Info);
             std::fs::create_dir_all(&doc.output_dir)?;
-            let mut out_buf_tex = File::create(PathBuf::from_slash(format!(
+            let out_file_name = PathBuf::from_slash(format!(
                 "{}/{}.tex",
-                doc.output_dir, doc.file_name
-            )))?;
+                // FiXME unwrap
+                doc.output_dir.to_str().unwrap(), doc.file_name
+            ));
+            let mut out_buf_tex = File::create(out_file_name)?;
             out_buf_tex.write_all(tex_src_string.as_bytes())?
         }
 
@@ -156,14 +158,15 @@ fn main() -> Result<(), failure::Error> {
                     if file_name.starts_with(src_dir) {
                         let _path = path::olean_to_lean(file_name.strip_prefix(src_dir)?);
                         let mut output_path = doc.output_dir.clone();
-                        output_path.push_str(&doc.file_name);
+                        output_path.push(&doc.file_name);
+                        _path.parent().map(|p| output_path.push(p));
                         std::fs::create_dir_all(&output_path)?;
-                        // FIXME unwrap
-                        let mut out_buf_html = File::create(PathBuf::from_slash(format!(
+                        let out_file_name = PathBuf::from_slash(format!(
                             "{}/{}.html",
-                            output_path,
-                            _path.to_str().unwrap()
-                        )))?;
+                            // FIXME unwrap's
+                            output_path.to_str().unwrap(),
+                            _path.file_stem().unwrap().to_str().unwrap()));
+                        let mut out_buf_html = File::create(out_file_name)?;
                         out_buf_html.write_all(html_src.to_string().as_bytes())?;
                         break;
                     }
@@ -184,7 +187,8 @@ fn main() -> Result<(), failure::Error> {
                 std::fs::create_dir_all(&doc.output_dir)?;
                 let mut out_buf_pdf = File::create(PathBuf::from_slash(format!(
                     "{}/{}.pdf",
-                    doc.output_dir, doc.file_name
+                    // FIXME unwrap
+                    doc.output_dir.to_str().unwrap(), doc.file_name
                 )))?;
                 out_buf_pdf.write_all(&pdf_data)?
             }

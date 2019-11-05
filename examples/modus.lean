@@ -1,3 +1,6 @@
+/-! Documentation header for lumpy-leandoc modus example.
+    This file requires fixes present in the lean community edition.
+ -/
 variables {P Q : Prop}
 /-- Modus Tollens
 ```latex
@@ -9,6 +12,7 @@ variables {P Q : Prop}
     \end{prooftree}
 \end{centering}
 ```
+
 Example usage:
 ```lean
 def impl_double_neg_intro {P Q : Prop} (_ : P → Q) : ¬¬P → ¬¬Q :=

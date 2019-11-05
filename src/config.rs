@@ -8,7 +8,7 @@ pub struct Document {
     pub authors: Vec<String>,
     pub src_dirs: Vec<PathBuf>,
     pub strip_prefix: Option<String>,
-    pub output_dir: String,
+    pub output_dir: PathBuf,
     output_formats: Vec<OutputTarget>,
     comment_format: String,
 }
