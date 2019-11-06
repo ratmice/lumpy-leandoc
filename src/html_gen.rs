@@ -89,17 +89,18 @@ where
     let mods = olean_rs::deserialize::read_olean_modifications(&ol.code)?;
     let options = cmark::Options::empty();
     let md_result: Result<rope::Rope, failure::Error> =
-        mods.iter().fold(Ok("".into()), |out, m| match &m {
+        mods.iter().fold(Ok("<html><head><style>.indent{ padding-left: 1em; padding-right: 1em;}</style></head>".into()), |out, m| match &m {
             olean::types::Modification::Doc(_name, contents) => {
                 let parser = Parser::new_ext(contents, options);
                 let parse_state = ParseState::new(parser, setup_syntax_stuff()?);
                 let mut html_out = String::new();
                 cmark::html::push_html(&mut html_out, parse_state);
-                Ok(out? + html_out.into())
+                if _name.to_string().is_empty() { Ok(out? + html_out.into() + rope::Rope::from("<hr/>")) } // This should be a /-! -/ doc_string */
+                else { Ok(out? + format!(r#"<div><h4>{}</h4><div class="indent">"#, _name).into() +  html_out.into() + "</div></div>".into()) } // and one for a declaration _name.
             }
             _ => out,
         });
-    let _ = omap.insert(path, md_result?);
+    let _ = omap.insert(path, md_result? + rope::Rope::from("</html>"));
     Ok(omap)
 }
 
