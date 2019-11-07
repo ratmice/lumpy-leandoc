@@ -195,27 +195,36 @@ pub fn handle_event<'a>(
             "unsupported task list marker:".to_string(),
         )
         .into()),
-        cmark::Event::Start(cmark::Tag::Rule) => Ok((rope + r"\hrulefill ".into(), syntax_core, None)),
+        cmark::Event::Start(cmark::Tag::Rule) => {
+            Ok((rope + r"\hrulefill ".into(), syntax_core, None))
+        }
         cmark::Event::End(cmark::Tag::Rule) => Ok((rope, syntax_core, None)),
-        cmark::Event::Start(cmark::Tag::Strong) => Ok((rope + r"\textbf{".into(), syntax_core, None)),
+        cmark::Event::Start(cmark::Tag::Strong) => {
+            Ok((rope + r"\textbf{".into(), syntax_core, None))
+        }
         cmark::Event::End(cmark::Tag::Strong) => Ok((rope + r"}".into(), syntax_core, None)),
         cmark::Event::Start(cmark::Tag::Header(i)) => {
-           let foo =  match i {
-               1 => Ok(r"\chapter{"),
-               2 => Ok(r"\section{"),
-               3 => Ok(r"\subsection{"),
-               4 => Ok(r"\subsubsection{"),
-               5 => Ok(r"\paragraph{"),
-               6 => Ok(r"\subparagraph{"),
-               _ => Err(errors::ErrorKind::MarkdownLatexConversion(format!("unsupported heading {}", i))),
-           };
-           Ok((rope + foo?.into(), syntax_core, None))
-        },
+            let foo = match i {
+                1 => Ok(r"\chapter{"),
+                2 => Ok(r"\section{"),
+                3 => Ok(r"\subsection{"),
+                4 => Ok(r"\subsubsection{"),
+                5 => Ok(r"\paragraph{"),
+                6 => Ok(r"\subparagraph{"),
+                _ => Err(errors::ErrorKind::MarkdownLatexConversion(format!(
+                    "unsupported heading {}",
+                    i
+                ))),
+            };
+            Ok((rope + foo?.into(), syntax_core, None))
+        }
         cmark::Event::End(cmark::Tag::Header(_)) => Ok((rope + r"}".into(), syntax_core, None)),
 
-        event => Err(
-            errors::ErrorKind::MarkdownLatexConversion(format!("unsupported markdown tag {:?}", event)).into(),
-        ),
+        event => Err(errors::ErrorKind::MarkdownLatexConversion(format!(
+            "unsupported markdown tag {:?}",
+            event
+        ))
+        .into()),
     }
 }
 

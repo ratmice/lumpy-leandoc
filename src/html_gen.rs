@@ -88,19 +88,62 @@ where
     let ol = olean_rs::deserialize::read_olean(File::open(&path)?)?;
     let mods = olean_rs::deserialize::read_olean_modifications(&ol.code)?;
     let options = cmark::Options::empty();
+    // TODO
+    // We probably shouldn't hard code "docs_style.css". Instead add a path to Lumpy.toml
+    // copying that to the appropriate place. That would at least make it easy to install
+    // the same stylesheet across multiple libraries.
+    //
+    // hard coded CSS classes:
+    // * decl
+    // * decl_par
+    let mut has_contents = false;
     let md_result: Result<rope::Rope, failure::Error> =
-        mods.iter().fold(Ok("<html><head><style>.indent{ padding-left: 1em; padding-right: 1em;}</style></head>".into()), |out, m| match &m {
-            olean::types::Modification::Doc(_name, contents) => {
+        mods.iter().fold(Ok("".into()), |out, m| match &m {
+            olean::types::Modification::Doc(name, contents) => {
+                has_contents = has_contents | !contents.is_empty();
                 let parser = Parser::new_ext(contents, options);
                 let parse_state = ParseState::new(parser, setup_syntax_stuff()?);
                 let mut html_out = String::new();
                 cmark::html::push_html(&mut html_out, parse_state);
-                if _name.to_string().is_empty() { Ok(out? + html_out.into() + rope::Rope::from("<hr/>")) } // This should be a /-! -/ doc_string */
-                else { Ok(out? + format!(r#"<div><h4>{}</h4><div class="indent">"#, _name).into() +  html_out.into() + "</div></div>".into()) } // and one for a declaration _name.
+                // This should be a /-! -/ doc_string */
+                if name.to_string().is_empty() {
+                    Ok(out? + html_out.into() + rope::Rope::from("<hr/>"))
+                }
+                else {
+                    // and one for a declaration.
+                    Ok(out?
+                        + format!(
+                            r#"<div class="decl"><h4>{}</h4><div class="decl_par">"#,
+                            name
+                        )
+                        .into()
+                        + html_out.into()
+                        + "</div></div>".into())
+                }
             }
             _ => out,
         });
-    let _ = omap.insert(path, md_result? + rope::Rope::from("</html>"));
+
+    let header = format!(
+        r#"<html><head><link rel="stylesheet" href="{}docs_style.css"></head>"#,
+        // given a path like 'src/foo/bar/baz.lean' we want "../../"
+        // FIXME This should be less terrible.
+        // We probably don't need to worry about / vs \ path separator since it's output?
+        path.as_ref()
+            .iter()
+            .skip(2)
+            .fold(&mut String::new(), |acc, _| {
+                acc.push_str("../");
+                acc
+            })
+    );
+    let md_result = md_result?;
+    if !md_result.is_empty() {
+        let _ = omap.insert(
+            path,
+            rope::Rope::from(header) + md_result + rope::Rope::from("</html>"),
+        );
+    }
     Ok(omap)
 }
 

@@ -13,7 +13,6 @@ extern crate rayon;
 extern crate tectonic;
 extern crate toml;
 extern crate xi_rope as rope;
-
 use crowbook_text_processing::escape;
 use path_slash::PathBufExt;
 
@@ -27,7 +26,6 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use std::string::String;
-
 mod config;
 mod errors;
 mod html_gen;
@@ -79,119 +77,223 @@ fn main() -> Result<(), failure::Error> {
         unique_files.iter().map(|pb| pb.clone()).collect()
     };
 
-    let latex_tree: im::ordmap::OrdMap<&Path, rope::Rope> = {
-        let _tmr = timer!("olean -> latex").level(log::Level::Info);
-        olean_files
-            .par_iter()
-            .map(|x| Ok(x.as_path()))
-            // generate latex
-            .fold(|| Ok(im::ordmap::OrdMap::new()), gen_latex)
-            .reduce(
-                || Ok(im::ordmap::OrdMap::new()),
-                |map1, map2| Ok(im::ordmap::OrdMap::union(map1?, map2?)),
-            )?
-    };
+    for doc in &docs.documents {
+        if doc.output_tex() {
+            let latex_tree: im::ordmap::OrdMap<&Path, rope::Rope> = {
+                let _tmr = timer!("olean -> latex").level(log::Level::Info);
+                olean_files
+                    .par_iter()
+                    .map(|x| Ok(x.as_path()))
+                    // generate latex
+                    .fold(|| Ok(im::ordmap::OrdMap::new()), gen_latex)
+                    .reduce(
+                        || Ok(im::ordmap::OrdMap::new()),
+                        |map1, map2| Ok(im::ordmap::OrdMap::union(map1?, map2?)),
+                    )?
+            };
 
-    let html_tree: im::ordmap::OrdMap<&Path, rope::Rope> = {
-        let _tmr = timer!("olean -> html").level(log::Level::Info);
-        olean_files
-            .par_iter()
-            .map(|x| Ok(x.as_path()))
-            .fold(|| Ok(im::ordmap::OrdMap::new()), gen_html)
-            .reduce(
-                || Ok(im::ordmap::OrdMap::new()),
-                |map1, map2| Ok(im::ordmap::OrdMap::union(map1?, map2?)),
-            )?
-    };
-
-    for doc in docs.documents {
-        let mut ropes: Vec<rope::Rope> = vec!["".into(); doc.src_dirs.len()];
-        /* build sections in the order of the first src_dir that matches the glob */
-        {
-            let _tmr = timer!("sorting", "sections {}.tex", doc.file_name).level(log::Level::Info);
-            for (file_name, latex_src) in &latex_tree {
-                for (i, src_dir) in doc.src_dirs.iter().enumerate() {
-                    if file_name.starts_with(src_dir) {
-                        let path = path::olean_to_lean(file_name.strip_prefix(src_dir)?);
-                        let section: rope::Rope = rope::Rope::from(r"\section{")
-                            + escape::tex(path.to_string_lossy()).into()
-                            + "}".into();
-                        let foo = &ropes[i];
-                        ropes[i] = (foo.clone()) + section + latex_src.clone();
-                        break;
+            let mut ropes: Vec<rope::Rope> = vec!["".into(); doc.src_dirs.len()];
+            /* build sections in the order of the first src_dir that matches the glob */
+            {
+                let _tmr =
+                    timer!("sorted", "sections {}.tex", doc.file_name).level(log::Level::Info);
+                for (file_name, latex_src) in &latex_tree {
+                    for (i, src_dir) in doc.src_dirs.iter().enumerate() {
+                        if file_name.starts_with(src_dir) {
+                            let path = path::olean_to_lean(file_name.strip_prefix(src_dir)?);
+                            let section: rope::Rope = rope::Rope::from(r"\section{")
+                                + escape::tex(path.to_string_lossy()).into()
+                                + "}".into();
+                            let foo = &ropes[i];
+                            ropes[i] = (foo.clone()) + section + latex_src.clone();
+                            break;
+                        }
                     }
                 }
             }
-        }
-        /* collate all the sections into one document sandwiched by a header and footer */
-        let tex_src_string = {
-            let _tmr =
-                timer!("collating", "sections {}.tex", doc.file_name).level(log::Level::Info);
-            String::from(
-                ropes.iter().fold(
-                    tex_gen::doc_begin(
-                        &doc.title,
-                        doc.authors.iter().map(String::as_str).collect(),
-                    ),
-                    |folding, section| folding + section.clone(),
-                ) + tex_gen::doc_end(),
-            )
-        };
+            /* collate all the sections into one document sandwiched by a header and footer */
+            let tex_src_string = {
+                let _tmr =
+                    timer!("collated", "sections {}.tex", doc.file_name).level(log::Level::Info);
+                String::from(
+                    ropes.iter().fold(
+                        tex_gen::doc_begin(
+                            &doc.title,
+                            doc.authors.iter().map(String::as_str).collect(),
+                        ),
+                        |folding, section| folding + section.clone(),
+                    ) + tex_gen::doc_end(),
+                )
+            };
 
-        if doc.output_tex() {
-            /* Write tex sources */
-            let _tmr = timer!("writing", "{}.tex", doc.file_name).level(log::Level::Info);
-            std::fs::create_dir_all(&doc.output_dir)?;
-            let out_file_name = PathBuf::from_slash(format!(
-                "{}/{}.tex",
-                // FiXME unwrap
-                doc.output_dir.to_str().unwrap(), doc.file_name
-            ));
-            let mut out_buf_tex = File::create(out_file_name)?;
-            out_buf_tex.write_all(tex_src_string.as_bytes())?
+            {
+                /* Write tex sources */
+                let _tmr = timer!("wrote", "{}.tex", doc.file_name).level(log::Level::Info);
+                std::fs::create_dir_all(&doc.output_dir)?;
+                let out_file_name = PathBuf::from_slash(format!(
+                    "{}/{}.tex",
+                    // FiXME unwrap
+                    doc.output_dir.to_str().unwrap(),
+                    doc.file_name
+                ));
+                let mut out_buf_tex = File::create(out_file_name)?;
+                out_buf_tex.write_all(tex_src_string.as_bytes())?
+            }
+
+            if doc.output_pdf() {
+                /* Run the TeX engine */
+                let pdf_data: Vec<u8> = {
+                    let _tmr = timer!("generate", "{}.pdf", doc.file_name).level(log::Level::Info);
+                    tectonic::latex_to_pdf(tex_src_string).sync()?
+                };
+
+                /* output the results */
+                {
+                    let _tmr = timer!("wrote", "{}.pdf", doc.file_name).level(log::Level::Info);
+                    std::fs::create_dir_all(&doc.output_dir)?;
+                    let mut out_buf_pdf = File::create(PathBuf::from_slash(format!(
+                        "{}/{}.pdf",
+                        // FIXME unwrap
+                        doc.output_dir.to_str().unwrap(),
+                        doc.file_name
+                    )))?;
+                    out_buf_pdf.write_all(&pdf_data)?
+                }
+            }
         }
 
         if doc.output_html() {
-            let _tmr = timer!("writing", "{}.html", doc.file_name).level(log::Level::Info);
+            let html_tree: im::ordmap::OrdMap<&Path, rope::Rope> = {
+                let _tmr = timer!("olean -> html").level(log::Level::Info);
+                olean_files
+                    .par_iter()
+                    .map(|x| Ok(x.as_path()))
+                    .fold(|| Ok(im::ordmap::OrdMap::new()), gen_html)
+                    .reduce(
+                        || Ok(im::ordmap::OrdMap::new()),
+                        |map1, map2| Ok(im::ordmap::OrdMap::union(map1?, map2?)),
+                    )?
+            };
+
+            let _tmr = timer!("wrote", "{}/ html", doc.file_name).level(log::Level::Info);
             for (file_name, html_src) in &html_tree {
                 for (_i, src_dir) in doc.src_dirs.iter().enumerate() {
                     if file_name.starts_with(src_dir) {
                         let _path = path::olean_to_lean(file_name.strip_prefix(src_dir)?);
                         let mut output_path = doc.output_dir.clone();
-                        output_path.push(&doc.file_name);
+                        output_path.push(&doc.file_name); // file_name here is a directory name.
                         _path.parent().map(|p| output_path.push(p));
                         std::fs::create_dir_all(&output_path)?;
                         let out_file_name = PathBuf::from_slash(format!(
                             "{}/{}.html",
                             // FIXME unwrap's
                             output_path.to_str().unwrap(),
-                            _path.file_stem().unwrap().to_str().unwrap()));
+                            _path.file_stem().unwrap().to_str().unwrap()
+                        ));
                         let mut out_buf_html = File::create(out_file_name)?;
                         out_buf_html.write_all(html_src.to_string().as_bytes())?;
                         break;
                     }
                 }
             }
-        }
 
-        if doc.output_pdf() {
-            /* Run the TeX engine */
-            let pdf_data: Vec<u8> = {
-                let _tmr = timer!("generate", "{}.pdf", doc.file_name).level(log::Level::Info);
-                tectonic::latex_to_pdf(tex_src_string).sync()?
-            };
+            //use petgraph::dot::{Config, Dot};
+            use petgraph::graphmap::DiGraphMap;
 
-            /* output the results */
-            {
-                let _tmr = timer!("writing", "{}.pdf", doc.file_name).level(log::Level::Info);
-                std::fs::create_dir_all(&doc.output_dir)?;
-                let mut out_buf_pdf = File::create(PathBuf::from_slash(format!(
-                    "{}/{}.pdf",
-                    // FIXME unwrap
-                    doc.output_dir.to_str().unwrap(), doc.file_name
-                )))?;
-                out_buf_pdf.write_all(&pdf_data)?
+            let _tmr = timer!("wrote", "index.html").level(log::Level::Info);
+            let mut g = DiGraphMap::<&Path, ()>::new();
+            let empty_path = Path::new("");
+            let empty_node = g.add_node(empty_path);
+            for file_name in html_tree.keys() {
+                for src_dir in doc.src_dirs.iter() {
+                    if file_name.starts_with(src_dir) {
+                        let file_name = file_name.strip_prefix(src_dir)?;
+                        let mut last_path: Option<&Path> = None;
+                        for path_part in file_name.ancestors() {
+                            // Note that since this is a relative path,
+                            // we actually get the empty path as a root
+                            // of all elements.
+                            let path_node_index = g.add_node(path_part);
+                            if let Some(last_path_index) = last_path {
+                                g.add_edge(path_node_index, last_path_index, ());
+                            }
+                            last_path = Some(path_node_index);
+                        }
+                    }
+                }
             }
+
+            /* This index generation stuff is all fairly hideous.
+             * The main problem at this point is that I don't see a way to sort by
+             * directories first, then alphabetical by filename.
+             *
+             * The other methods I have tried have then had difficulty with an inability
+             * to express the dfs finish event.
+             *
+             * perhaps if we only store directories in the graph.
+             * anyhow, at least everything is visible.
+             */
+            use petgraph::visit::depth_first_search;
+            use petgraph::visit::DfsEvent;
+
+            let mut output_path = doc.output_dir.clone();
+            output_path.push(&doc.file_name); // file_name here is a directory name
+            let out_file_name = PathBuf::from_slash(format!(
+                "{}/index.html",
+                // FIXME unwrap's
+                output_path.to_str().unwrap()
+            ));
+            std::fs::create_dir_all(&output_path)?;
+            let mut out_buf_html = File::create(out_file_name)?;
+            write!(
+                out_buf_html,
+                r#"<html><head><link rel="stylesheet" href="docs_style.css"></head><body>"#
+            )?;
+            write!(out_buf_html, "<ul id=\"index_root_ul\">\n")?;
+            // We end up swallowing a bunch of errors here because |event| {}
+            // returns unit and not an error.
+            depth_first_search(&g, Some(empty_node), |event| {
+                match event {
+                    DfsEvent::Discover(n, _time) => {
+                        if n != empty_path {
+                            if None == n.extension() {
+                                write!(out_buf_html, "<li>\n<span class=\"caret\">{}</span>\n<ul class=\"nested\">\n", n.file_name().unwrap().to_str().unwrap()).ok();
+                            } else {
+                                let file_stem = n.file_stem().unwrap().to_str().unwrap();
+                                write!(
+                                    out_buf_html,
+                                    "<li><a href=\"{}/{}.html\">{}</a><li>\n",
+                                    n.parent().unwrap().display(),
+                                    file_stem,
+                                    file_stem
+                                )
+                                .ok();
+                            }
+                        }
+                    }
+                    DfsEvent::Finish(n, _time) => {
+                        if n != empty_path && None == n.extension() {
+                            write!(out_buf_html, "</ul>\n").ok();
+                        }
+                    }
+                    _ => (),
+                };
+                ()
+            });
+            write!(out_buf_html, "</ul>\n")?;
+            write!(
+                out_buf_html,
+                r#"<script>var toggler = document.getElementsByClassName("caret");
+var i;
+
+for (i = 0; i < toggler.length; i++) {{
+  toggler[i].addEventListener("click", function() {{
+    this.parentElement.querySelector(".nested").classList.toggle("active");
+    this.classList.toggle("caret-down");
+  }});
+}}</script>"#
+            )?;
+            write!(out_buf_html, "</body></html>")?;
         }
     }
     Ok(())
