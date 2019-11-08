@@ -96,11 +96,9 @@ where
     // hard coded CSS classes:
     // * decl
     // * decl_par
-    let mut has_contents = false;
     let md_result: Result<rope::Rope, failure::Error> =
         mods.iter().fold(Ok("".into()), |out, m| match &m {
             olean::types::Modification::Doc(name, contents) => {
-                has_contents = has_contents | !contents.is_empty();
                 let parser = Parser::new_ext(contents, options);
                 let parse_state = ParseState::new(parser, setup_syntax_stuff()?);
                 let mut html_out = String::new();
