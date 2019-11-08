@@ -79,14 +79,17 @@ impl<'a> Iterator for ParseState<'a> {
 
 pub fn gen_elements<P: AsRef<Path>>(
     acc_r: Result<im::ordmap::OrdMap<P, rope::Rope>, failure::Error>,
-    path: P,
+    json_path: P,
 ) -> Result<im::ordmap::OrdMap<P, rope::Rope>, failure::Error>
 where
     P: std::cmp::Ord + std::clone::Clone,
 {
     let mut omap: im::ordmap::OrdMap<P, rope::Rope> = acc_r?;
-    let ol = olean_rs::deserialize::read_olean(File::open(&path)?)?;
-    let mods = olean_rs::deserialize::read_olean_modifications(&ol.code)?;
+    use crate::json_input::JsonLeanModule;
+
+    let json_file = File::open(json_path.as_ref())?;
+    let reader = std::io::BufReader::new(json_file);
+    let json_input: JsonLeanModule = serde_json::from_reader(reader)?;
     let options = cmark::Options::empty();
     // TODO
     // We probably shouldn't hard code "docs_style.css". Instead add a path to Lumpy.toml
@@ -96,18 +99,31 @@ where
     // hard coded CSS classes:
     // * decl
     // * decl_par
+    let mut html_out = String::new();
+    // This should be a /-! -/ doc_string */
+    let module_doc: Result<rope::Rope, failure::Error> = match &json_input.doc {
+        Some(doc) => {
+            let parser = Parser::new_ext(doc, options);
+            let parse_state = ParseState::new(parser, setup_syntax_stuff()?);
+            cmark::html::push_html(&mut html_out, parse_state);
+            Ok(rope::Rope::from(r#"<div class="module">"#)
+                + rope::Rope::from(html_out)
+                + rope::Rope::from("<hr/></div>"))
+        }
+        None => Ok(rope::Rope::from(html_out)),
+    };
+
     let md_result: Result<rope::Rope, failure::Error> =
-        mods.iter().fold(Ok("".into()), |out, m| match &m {
-            olean::types::Modification::Doc(name, contents) => {
-                let parser = Parser::new_ext(contents, options);
-                let parse_state = ParseState::new(parser, setup_syntax_stuff()?);
-                let mut html_out = String::new();
-                cmark::html::push_html(&mut html_out, parse_state);
-                // This should be a /-! -/ doc_string */
-                if name.to_string().is_empty() {
-                    Ok(out? + html_out.into() + rope::Rope::from("<hr/>"))
-                } else {
-                    // and one for a declaration.
+        json_input
+            .declarations
+            .iter()
+            .fold(module_doc, |out, decl| match &decl.doc {
+                Some(doc) => {
+                    let parser = Parser::new_ext(&doc, options);
+                    let parse_state = ParseState::new(parser, setup_syntax_stuff()?);
+                    let mut html_out = String::new();
+                    cmark::html::push_html(&mut html_out, parse_state);
+                    let name = &decl.text;
                     Ok(out?
                         + format!(
                             r#"<div class="decl"><h4>{}</h4><div class="decl_par">"#,
@@ -117,16 +133,16 @@ where
                         + html_out.into()
                         + "</div></div>".into())
                 }
-            }
-            _ => out,
-        });
+                None => out,
+            });
 
     let header = format!(
         r#"<html><head><link rel="stylesheet" href="{}docs_style.css"></head>"#,
         // given a path like 'src/foo/bar/baz.lean' we want "../../"
         // FIXME This should be less terrible.
         // We probably don't need to worry about / vs \ path separator since it's output?
-        path.as_ref()
+        json_path
+            .as_ref()
             .iter()
             .skip(2)
             .fold(&mut String::new(), |acc, _| {
@@ -137,7 +153,7 @@ where
     let md_result = md_result?;
     if !md_result.is_empty() {
         let _ = omap.insert(
-            path,
+            json_path,
             rope::Rope::from(header) + md_result + rope::Rope::from("</html>"),
         );
     }
@@ -146,8 +162,8 @@ where
 
 pub fn gen_html<'a>(
     acc: Result<im::ordmap::OrdMap<&'a Path, rope::Rope>, failure::Error>,
-    olean: Result<&'a Path, errors::AppError>,
+    json_path: Result<&'a Path, errors::AppError>,
 ) -> Result<im::ordmap::OrdMap<&'a Path, rope::Rope>, failure::Error> {
-    let elems = gen_elements(acc, olean?);
+    let elems = gen_elements(acc, json_path?);
     elems
 }

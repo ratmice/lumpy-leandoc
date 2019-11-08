@@ -6,7 +6,7 @@ lean source files. In order to avoid parsing lean sources it relies
 on extracting the documentation from lean bytecode.
 
 Due to the above, you must your **compile sources** with **_lean first_**.
-Documentation will then be generated from the .olean file which lean produces.
+Documentation will then be generated from a .json file which lean produces.
 
 See Lumpy.toml for an example configuration file.
 

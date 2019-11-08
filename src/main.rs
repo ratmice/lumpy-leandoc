@@ -5,7 +5,6 @@ extern crate crowbook_text_processing;
 extern crate im;
 extern crate log;
 extern crate logging_timer;
-extern crate olean_rs as olean;
 extern crate path_slash;
 extern crate rayon;
 // need to feature gate this linking in rayon_logs or rayon.
@@ -29,6 +28,7 @@ use std::string::String;
 mod config;
 mod errors;
 mod html_gen;
+mod json_input;
 mod path;
 mod syntax_hilight;
 mod tex_gen;
@@ -59,7 +59,7 @@ fn main() -> Result<(), failure::Error> {
     let cfg_file_dir = cfg_file_path.parent().unwrap_or_else(|| &cwd);
     env::set_current_dir(cfg_file_dir)?;
 
-    let olean_files: Vec<PathBuf> = {
+    let json_files: Vec<PathBuf> = {
         let unique_files: im::HashSet<PathBuf> = docs
             .documents
             .par_iter()
@@ -80,8 +80,8 @@ fn main() -> Result<(), failure::Error> {
     for doc in &docs.documents {
         if doc.output_tex() {
             let latex_tree: im::ordmap::OrdMap<&Path, rope::Rope> = {
-                let _tmr = timer!("olean -> latex").level(log::Level::Info);
-                olean_files
+                let _tmr = timer!("json -> latex").level(log::Level::Info);
+                json_files
                     .par_iter()
                     .map(|x| Ok(x.as_path()))
                     // generate latex
@@ -100,7 +100,7 @@ fn main() -> Result<(), failure::Error> {
                 for (file_name, latex_src) in &latex_tree {
                     for (i, src_dir) in doc.src_dirs.iter().enumerate() {
                         if file_name.starts_with(src_dir) {
-                            let path = path::olean_to_lean(file_name.strip_prefix(src_dir)?);
+                            let path = path::json_to_lean(file_name.strip_prefix(src_dir)?);
                             let section: rope::Rope = rope::Rope::from(r"\section{")
                                 + escape::tex(path.to_string_lossy()).into()
                                 + "}".into();
@@ -164,8 +164,8 @@ fn main() -> Result<(), failure::Error> {
 
         if doc.output_html() {
             let html_tree: im::ordmap::OrdMap<&Path, rope::Rope> = {
-                let _tmr = timer!("olean -> html").level(log::Level::Info);
-                olean_files
+                let _tmr = timer!("json -> html").level(log::Level::Info);
+                json_files
                     .par_iter()
                     .map(|x| Ok(x.as_path()))
                     .fold(|| Ok(im::ordmap::OrdMap::new()), gen_html)
@@ -179,7 +179,7 @@ fn main() -> Result<(), failure::Error> {
             for (file_name, html_src) in &html_tree {
                 for (_i, src_dir) in doc.src_dirs.iter().enumerate() {
                     if file_name.starts_with(src_dir) {
-                        let _path = path::olean_to_lean(file_name.strip_prefix(src_dir)?);
+                        let _path = path::json_to_lean(file_name.strip_prefix(src_dir)?);
                         let mut output_path = doc.output_dir.clone();
                         output_path.push(&doc.file_name); // file_name here is a directory name.
                         _path.parent().map(|p| output_path.push(p));

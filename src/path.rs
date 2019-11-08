@@ -29,19 +29,19 @@ pub fn is_dir(entry: &walkdir::DirEntry) -> bool {
     entry.file_type().is_dir()
 }
 
-pub fn is_olean(entry: &walkdir::DirEntry) -> bool {
+pub fn is_json(entry: &walkdir::DirEntry) -> bool {
     entry.file_type().is_file()
         && entry
             .file_name()
             .to_str()
-            .map(|s| s.ends_with(".olean"))
+            .map(|s| s.ends_with(".json"))
             .unwrap_or(false)
 }
 
-pub fn olean_to_lean<P: AsRef<Path>>(foo: P) -> PathBuf {
+pub fn json_to_lean<P: AsRef<Path>>(foo: P) -> PathBuf {
     let foo = foo.as_ref();
     let ext: Option<&str> = foo.extension().map_or(None, |ext| ext.to_str());
-    if Some("olean") == ext {
+    if Some("json") == ext {
         foo.with_extension("lean")
     } else {
         foo.to_path_buf()
@@ -57,7 +57,7 @@ pub fn walk_without_duplicates<P: AsRef<Path>>(
 ) -> Result<im::HashSet<PathBuf>, failure::Error> {
     let w = walkdir::WalkDir::new(p);
     w.into_iter()
-        .filter_entry(|entry| !is_hidden(entry) && (is_dir(entry) || is_olean(entry)))
+        .filter_entry(|entry| !is_hidden(entry) && (is_dir(entry) || is_json(entry)))
         .fold(set, |set, entry| {
             let entry = entry?;
             if is_dir(&entry) {

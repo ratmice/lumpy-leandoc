@@ -230,45 +230,66 @@ pub fn handle_event<'a>(
 
 pub fn gen_elements<P: AsRef<Path>>(
     acc_r: Result<im::ordmap::OrdMap<P, rope::Rope>, failure::Error>,
-    path: P,
+    json_path: P,
 ) -> Result<im::ordmap::OrdMap<P, rope::Rope>, failure::Error>
 where
     P: std::cmp::Ord + std::clone::Clone,
 {
     let mut omap: im::ordmap::OrdMap<P, rope::Rope> = acc_r?;
-    let ol = olean_rs::deserialize::read_olean(File::open(&path)?)?;
-    let mods = olean_rs::deserialize::read_olean_modifications(&ol.code)?;
     let options = cmark::Options::empty();
     let syntax_core = setup_syntax_stuff()?;
+    let json_file = File::open(json_path.as_ref())?;
+    let reader = std::io::BufReader::new(json_file);
+    use crate::json_input::JsonLeanModule;
+    let json_input: JsonLeanModule = serde_json::from_reader(reader)?;
+    let header_parse: Result<(rope::Rope, _, _), failure::Error> = match &json_input.doc {
+        Some(documentation) => {
+            let parser = cmark::Parser::new_ext(documentation.as_str(), options);
+            parser
+                .into_offset_iter()
+                .fold(Ok(("".into(), &syntax_core, None)), |result, event| {
+                    handle_event(result, event)
+                })
+        }
+        None => Ok(("".into(), &syntax_core, None)), //rope::Rope::from("".into()),
+    };
 
-    let md_result: Result<(rope::Rope, _, _), failure::Error> =
-        mods.iter()
-            .fold(Ok(("".into(), &syntax_core, None)), |result, m| match &m {
-                olean::types::Modification::Doc(name, contents) => {
-                    let (rope, syntax_core, parse_state) = result?;
-                    let rope =
-                        rope + format!("\\paragraph{{{}}}\n", escape::tex(name.to_string())).into();
-                    let parser = cmark::Parser::new_ext(contents.as_str(), options);
-                    parser
-                        .into_offset_iter()
-                        .fold(Ok((rope, &syntax_core, parse_state)), |result, event| {
-                            handle_event(result, event)
-                        })
-                }
-                _ => {
-                    let (rope, syntax_core, _) = result?;
-                    Ok((rope, &syntax_core, None))
-                }
-            });
-    let _ = omap.insert(path, md_result?.0);
+    let md_result: Result<(rope::Rope, _, _), failure::Error> = json_input
+        .declarations
+        .iter()
+        .fold(header_parse, |result, decl| match &decl.doc {
+            Some(documentation) => {
+                let name = &decl.text;
+                let (rope, syntax_core, parse_state) = result?;
+                let rope =
+                    rope + format!("\\paragraph{{{}}}\n", escape::tex(name.to_string())).into();
+                let parser = cmark::Parser::new_ext(documentation.as_str(), options);
+                parser
+                    .into_offset_iter()
+                    .fold(Ok((rope, &syntax_core, parse_state)), |result, event| {
+                        handle_event(result, event)
+                    })
+            }
+            _ => {
+                let (rope, syntax_core, _) = result?;
+                Ok((rope, &syntax_core, None))
+            }
+        });
+    // after having split declaration and header parsing, this case still requires testing,
+    // which I have yet to do.
+    // FIXME remove this comment.
+    let md_result = md_result?;
+    if !md_result.0.is_empty() {
+        let _ = omap.insert(json_path, md_result.0);
+    }
     Ok(omap)
 }
 
 pub fn gen_latex<'a>(
     acc: Result<im::ordmap::OrdMap<&'a Path, rope::Rope>, failure::Error>,
-    olean: Result<&'a Path, errors::AppError>,
+    json_path: Result<&'a Path, errors::AppError>,
 ) -> Result<im::ordmap::OrdMap<&'a Path, rope::Rope>, failure::Error> {
-    let elems = gen_elements(acc, olean?);
+    let elems = gen_elements(acc, json_path?);
     elems
 }
 
