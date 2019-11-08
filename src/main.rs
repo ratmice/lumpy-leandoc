@@ -250,40 +250,40 @@ fn main() -> Result<(), failure::Error> {
                 r#"<html><head><link rel="stylesheet" href="docs_style.css"></head><body>"#
             )?;
             write!(out_buf_html, "<ul id=\"index_root_ul\">\n")?;
-            // We end up swallowing a bunch of errors here because |event| {}
-            // returns unit and not an error.
-            depth_first_search(&g, Some(empty_node), |event| {
-                match event {
-                    DfsEvent::Discover(n, _time) => {
-                        if n != empty_path {
-                            if None == n.extension() {
-                                write!(out_buf_html, "<li>\n<span class=\"caret\">{}</span>\n<ul class=\"nested\">\n", n.file_name().unwrap().to_str().unwrap()).ok();
-                            } else {
-                                let file_stem = n.file_stem().unwrap().to_str().unwrap();
-                                write!(
-                                    out_buf_html,
-                                    "<li><a href=\"{}/{}.html\">{}</a><li>\n",
-                                    n.parent().unwrap().display(),
-                                    file_stem,
-                                    file_stem
-                                )
-                                .ok();
-                            }
-                        }
+            depth_first_search(&g, Some(empty_node), |event| match event {
+                DfsEvent::Discover(n, _time) => {
+                    if n == empty_path {
+                        return Ok(());
                     }
-                    DfsEvent::Finish(n, _time) => {
-                        if n != empty_path && None == n.extension() {
-                            write!(out_buf_html, "</ul>\n").ok();
-                        }
+                    if None == n.extension() {
+                        write!(
+                            out_buf_html,
+                            "<li>\n<span class=\"caret\">{}</span>\n<ul class=\"nested\">\n",
+                            n.file_name().unwrap().to_str().unwrap()
+                        )
+                    } else {
+                        let file_stem = n.file_stem().unwrap().to_str().unwrap();
+                        write!(
+                            out_buf_html,
+                            "<li><a href=\"{}/{}.html\">{}</a><li>\n",
+                            n.parent().unwrap().display(),
+                            file_stem,
+                            file_stem
+                        )
                     }
-                    _ => (),
-                };
-                ()
-            });
+                }
+                DfsEvent::Finish(n, _time) => {
+                    if n != empty_path && None == n.extension() {
+                        return write!(out_buf_html, "</ul>\n");
+                    }
+                    Ok(())
+                }
+                _ => Ok(()),
+            })?;
             write!(out_buf_html, "</ul>\n")?;
             write!(
                 out_buf_html,
-                r#"<script>var toggler = document.getElementsByClassName("caret");
+                r#"<script>var toggler = document.getElementsByClassName("caret")
 var i;
 
 for (i = 0; i < toggler.length; i++) {{

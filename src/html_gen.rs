@@ -108,8 +108,7 @@ where
                 // This should be a /-! -/ doc_string */
                 if name.to_string().is_empty() {
                     Ok(out? + html_out.into() + rope::Rope::from("<hr/>"))
-                }
-                else {
+                } else {
                     // and one for a declaration.
                     Ok(out?
                         + format!(
