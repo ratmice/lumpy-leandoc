@@ -13,12 +13,16 @@ See Lumpy.toml for an example configuration file.
 ## Motivation
 The primary motivation is to make it easy to install and use.
 as such it comes with a TeX renderer [tectonic](https://tectonic-typesetting.github.io/)
-tectonic will automatically downloads any latex packages and fonts needed
+which automatically downloads any latex packages and fonts needed
 to render the document.
 
 Syntax highlighting will not shell out to any external tools that need to be
 installed seperately.
 
+## Issues:
+In it's current state, this automatic downloading results in the first run
+taking quite a bit of time while it fills in the cache. During this time there is currently no output.
+This wait can be avoided by not using the pdf output format.
 
 ## Installation
   1. install [rust](https://www.rust-lang.org/tools/install)
