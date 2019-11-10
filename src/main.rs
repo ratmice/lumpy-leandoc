@@ -219,8 +219,24 @@ fn main() -> Result<(), failure::Error> {
              * A/foo.lean
              *
              */
+
             /* To achieve that we:
-             *   First add all the directories to the graph. */
+             *   First add all the Dir -> file edges
+             */
+            for file_name in html_tree.keys() {
+                for src_dir in doc.src_dirs.iter() {
+                    if file_name.starts_with(src_dir) {
+                        let file_name = file_name.strip_prefix(src_dir)?;
+                        let file_node = g.add_node(&file_name);
+                        let parent_name = file_name.parent().unwrap();
+                        let parent_node = g.add_node(&parent_name);
+                        // A -> A/bar.lean
+                        g.add_edge(&parent_node, &file_node, ());
+                    }
+                }
+            }
+
+            /* Then add all the directories to the graph. */
             for file_name in html_tree.keys() {
                 for src_dir in doc.src_dirs.iter() {
                     if file_name.starts_with(src_dir) {
@@ -238,22 +254,6 @@ fn main() -> Result<(), failure::Error> {
                             }
                             child_path = Some(parent_node);
                         }
-                    }
-                }
-            }
-
-            /*
-             * Then add all the Dir -> file edges
-             */
-            for file_name in html_tree.keys() {
-                for src_dir in doc.src_dirs.iter() {
-                    if file_name.starts_with(src_dir) {
-                        let file_name = file_name.strip_prefix(src_dir)?;
-                        let file_node = g.add_node(&file_name);
-                        let parent_name = file_name.parent().unwrap();
-                        let parent_node = g.add_node(&parent_name);
-                        // A -> A/bar.lean
-                        g.add_edge(&parent_node, &file_node, ());
                     }
                 }
             }
