@@ -197,41 +197,70 @@ fn main() -> Result<(), failure::Error> {
                 }
             }
 
-            //use petgraph::dot::{Config, Dot};
             use petgraph::graphmap::DiGraphMap;
 
             let _tmr = timer!("wrote", "index.html").level(log::Level::Info);
             let mut g = DiGraphMap::<&Path, ()>::new();
             let empty_path = Path::new("");
             let empty_node = g.add_node(empty_path);
+
+            /* The goal here is to
+             * Avoid the following:
+             * A/
+             * A/bar.lean
+             * A/baz/
+             * A/foo.lean
+             *
+             * Rather, than what i'm prefer:
+             *
+             * A/
+             * A/baz/
+             * A/bar.lean
+             * A/foo.lean
+             *
+             */
+            /* To achieve that we:
+             *   First add all the directories to the graph. */
             for file_name in html_tree.keys() {
                 for src_dir in doc.src_dirs.iter() {
                     if file_name.starts_with(src_dir) {
-                        let file_name = file_name.strip_prefix(src_dir)?;
-                        let mut last_path: Option<&Path> = None;
-                        for path_part in file_name.ancestors() {
-                            // Note that since this is a relative path,
-                            // we actually get the empty path as a root
-                            // of all elements.
-                            let path_node_index = g.add_node(path_part);
-                            if let Some(last_path_index) = last_path {
-                                g.add_edge(path_node_index, last_path_index, ());
+                        let mut child_path: Option<&Path> = None;
+                        let child = file_name.strip_prefix(src_dir)?.parent().unwrap();
+                        for parent_path in child.ancestors() {
+                            // by making a relative path (via strip_prefix),
+                            // The last iteration of this loop should behave as the following.
+                            //  path_node = g.add_node(empty_path);
+                            // Giving us empty_path as the root of the tree..
+                            let parent_node = g.add_node(parent_path);
+                            if let Some(child_node) = child_path {
+                                // A -> A/Baz
+                                g.add_edge(parent_node, child_node, ());
                             }
-                            last_path = Some(path_node_index);
+                            child_path = Some(parent_node);
                         }
                     }
                 }
             }
 
-            /* This index generation stuff is all fairly hideous.
-             * The main problem at this point is that I don't see a way to sort by
-             * directories first, then alphabetical by filename.
-             *
-             * The other methods I have tried have then had difficulty with an inability
-             * to express the dfs finish event.
-             *
-             * perhaps if we only store directories in the graph.
-             * anyhow, at least everything is visible.
+            /*
+             * Then add all the Dir -> file edges
+             */
+            for file_name in html_tree.keys() {
+                for src_dir in doc.src_dirs.iter() {
+                    if file_name.starts_with(src_dir) {
+                        let file_name = file_name.strip_prefix(src_dir)?;
+                        let file_node = g.add_node(&file_name);
+                        let parent_name = file_name.parent().unwrap();
+                        let parent_node = g.add_node(&parent_name);
+                        // A -> A/bar.lean
+                        g.add_edge(&parent_node, &file_node, ());
+                    }
+                }
+            }
+
+            /*
+             * With that in mind the DFS, should traverse edges through all the directories
+             * before encountering edges to files.
              */
             use petgraph::visit::depth_first_search;
             use petgraph::visit::DfsEvent;
@@ -294,6 +323,15 @@ for (i = 0; i < toggler.length; i++) {{
 }}</script>"#
             )?;
             write!(out_buf_html, "</body></html>")?;
+            /*
+            // Debuging junk.
+            {
+                use petgraph::dot::Dot;
+                let dot_path = PathBuf::from("index.dot");
+                let mut dot_file = File::create(dot_path)?;
+                write!(dot_file, "{:?}", Dot::with_config(&g, &[]))?;
+            }
+            */
         }
     }
     Ok(())
