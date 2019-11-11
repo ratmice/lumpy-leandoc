@@ -3,7 +3,7 @@ extern crate im;
 extern crate syntect;
 use crate::errors;
 use crate::syntax_hilight::{
-    highlighter, setup_syntax_stuff, SyntaxCore, SyntaxStuff, DEFAULT_THEME,
+    highlighter, setup_syntax_core, SyntaxCore, SyntaxStuff, DEFAULT_THEME,
 };
 use crowbook_text_processing::escape;
 use pulldown_cmark as cmark;
@@ -239,7 +239,7 @@ where
     let ol = olean_rs::deserialize::read_olean(File::open(&path)?)?;
     let mods = olean_rs::deserialize::read_olean_modifications(&ol.code)?;
     let options = cmark::Options::empty();
-    let syntax_core = setup_syntax_stuff()?;
+    let syntax_core = setup_syntax_core()?;
 
     let md_result: Result<(rope::Rope, _, _), failure::Error> =
         mods.iter()

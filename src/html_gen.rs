@@ -7,16 +7,16 @@ use std::path::Path;
 use syntect as synt;
 struct ParseState<'a> {
     p: Parser<'a>,
-    sc: SyntaxCore,
+    sc: &'a SyntaxCore,
     theme_name: String,
     lang: Option<String>,
 }
 
 impl<'a> ParseState<'a> {
-    pub fn new(p: Parser<'a>, sc: SyntaxCore) -> Self {
+    pub fn new(p: Parser<'a>, sc: &'a SyntaxCore) -> Self {
         ParseState {
             p,
-            sc: sc,
+            sc,
             lang: None,
             theme_name: DEFAULT_THEME.to_string(),
         }
@@ -96,11 +96,12 @@ where
     // hard coded CSS classes:
     // * decl
     // * decl_par
+    let syntax_core = setup_syntax_core()?;
     let md_result: Result<rope::Rope, failure::Error> =
         mods.iter().fold(Ok("".into()), |out, m| match &m {
             olean::types::Modification::Doc(name, contents) => {
                 let parser = Parser::new_ext(contents, options);
-                let parse_state = ParseState::new(parser, setup_syntax_stuff()?);
+                let parse_state = ParseState::new(parser, &syntax_core);
                 let mut html_out = String::new();
                 cmark::html::push_html(&mut html_out, parse_state);
                 // This should be a /-! -/ doc_string */
