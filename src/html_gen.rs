@@ -7,16 +7,16 @@ use std::path::Path;
 use syntect as synt;
 struct ParseState<'a> {
     p: Parser<'a>,
-    sc: SyntaxCore,
+    sc: &'a SyntaxCore,
     theme_name: String,
     lang: Option<String>,
 }
 
 impl<'a> ParseState<'a> {
-    pub fn new(p: Parser<'a>, sc: SyntaxCore) -> Self {
+    pub fn new(p: Parser<'a>, sc: &'a SyntaxCore) -> Self {
         ParseState {
             p,
-            sc: sc,
+            sc,
             lang: None,
             theme_name: DEFAULT_THEME.to_string(),
         }
@@ -100,11 +100,12 @@ where
     // * decl
     // * decl_par
     let mut html_out = String::new();
+    let syntax_core = setup_syntax_core()?;
     // This should be a /-! -/ doc_string */
     let module_doc: Result<rope::Rope, failure::Error> = match &json_input.doc {
         Some(doc) => {
             let parser = Parser::new_ext(doc, options);
-            let parse_state = ParseState::new(parser, setup_syntax_stuff()?);
+            let parse_state = ParseState::new(parser, &syntax_core);
             cmark::html::push_html(&mut html_out, parse_state);
             Ok(rope::Rope::from(r#"<div class="module">"#)
                 + rope::Rope::from(html_out)
@@ -120,7 +121,7 @@ where
             .fold(module_doc, |out, decl| match &decl.doc {
                 Some(doc) => {
                     let parser = Parser::new_ext(&doc, options);
-                    let parse_state = ParseState::new(parser, setup_syntax_stuff()?);
+                    let parse_state = ParseState::new(parser, &syntax_core);
                     let mut html_out = String::new();
                     cmark::html::push_html(&mut html_out, parse_state);
                     let name = &decl.text;

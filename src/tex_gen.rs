@@ -3,7 +3,7 @@ extern crate im;
 extern crate syntect;
 use crate::errors;
 use crate::syntax_hilight::{
-    highlighter, setup_syntax_stuff, SyntaxCore, SyntaxStuff, DEFAULT_THEME,
+    highlighter, setup_syntax_core, SyntaxCore, SyntaxStuff, DEFAULT_THEME,
 };
 use crowbook_text_processing::escape;
 use pulldown_cmark as cmark;
@@ -237,7 +237,7 @@ where
 {
     let mut omap: im::ordmap::OrdMap<P, rope::Rope> = acc_r?;
     let options = cmark::Options::empty();
-    let syntax_core = setup_syntax_stuff()?;
+    let syntax_core = setup_syntax_core()?;
     let json_file = File::open(json_path.as_ref())?;
     let reader = std::io::BufReader::new(json_file);
     use crate::json_input::JsonLeanModule;
@@ -253,7 +253,6 @@ where
         }
         None => Ok(("".into(), &syntax_core, None)), //rope::Rope::from("".into()),
     };
-
     let md_result: Result<(rope::Rope, _, _), failure::Error> = json_input
         .declarations
         .iter()

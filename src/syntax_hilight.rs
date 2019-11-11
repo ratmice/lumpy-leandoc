@@ -52,7 +52,7 @@ pub const DEFAULT_THEME: &str = "Solarized (light)";
 // It would be nice to automate this.
 pub const LEAN3_SYNTAX: &str = include_str!("../assets/Lean3.sublime-syntax");
 
-pub fn setup_syntax_stuff() -> Result<SyntaxCore, failure::Error> {
+pub fn setup_syntax_core() -> Result<SyntaxCore, failure::Error> {
     let mut ss_builder = syntect::parsing::SyntaxSetBuilder::new();
     let sd = syntect::parsing::syntax_definition::SyntaxDefinition::load_from_str(
         LEAN3_SYNTAX,
